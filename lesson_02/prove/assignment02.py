@@ -1,7 +1,7 @@
 """
 Course    : CSE 351
 Assignment: 02
-Student   : <your name here>
+Student   : Hannah Crenshaw
 
 Instructions:
     - review instructions in the course
@@ -26,34 +26,89 @@ def main():
     data_files = get_filenames('data_files')
     # print(data_files)
     
-    log = Log(show_terminal=True)
-    log.start_timer()
+    log = Log(show_terminal=True) #Creates log file? 
+    log.start_timer() #Tracking time
 
     bank = Bank()
 
-    # TODO - Add a ATM_Reader for each data file
+    # NOTES
+    # Need Lock? 
 
-    test_balances(bank)
+    # TODO - Add an ATM_Reader for each data file
+    for file_path in data_files:
+        atm_list = []
+        new_atm = ATM_Reader(file_path, bank)
+        atm_list.append(new_atm)
 
-    log.stop_timer('Total time')
+    for atm in atm_list:
+        atm.start()
+
+    test_balances(bank) # Automated Tests
+
+    log.stop_timer('Total time') #Tracking time
 
 
 # ===========================================================================
-class ATM_Reader():
+class ATM_Reader(threading.Thread):
     # TODO - implement this class here
-    ...
+    # Make threaded
+    # RECEIVE file path
+    # Add variables to process file data
+    # call bank Withdraw, Deposit 
+    # Run method
+    def __init__(self, file_path, bank):
+        threading.Thread.__init__(self)
+        self.file_path = file_path
+        self.bank = bank
+        self.acc_id = ''
+        self.amount = ''
+        self.trans_type = ''
+
+    def run(self):
+        # open file
+        with open(self.file_path, 'r') as file: 
+            next(file, None)
+            # One line at a time, pars data
+            for line in file: 
+                clean_line = line.strip()
+                line_data = clean_line.split(',')
+                self.acc_id = line_data[0]
+                self.trans_type = line_data[1]
+                self.amount = line_data[2]
+
+                # Call bank with our data
+                if self.trans_type == 'w':
+                    self.bank.withdraw(acc_id=self.acc_id, amount=self.amount)
+                elif self.trans_type == 'd':
+                    self.bank.withraw(self.acc_id, self.amount)
+
+                return
 
 
 # ===========================================================================
 class Account():
     # TODO - implement this class here
+    # Method Deposit(amount)
+    # Method Withdraw(amount)
+    # Method GetBal() : Money
     ...
 
 
 # ===========================================================================
 class Bank():
+
     # TODO - implement this class here
-    ...
+    # Receive account info? 
+    # Have account dictionary variable
+    # Deposit Method (acc.id, amount)
+    # Withdraw Method (acc.id, amount)
+    # Get balance method (acc)
+    def __init__(self):
+        ...
+    def withdraw(acc_id, amount):
+        ...
+    def deposit(acc_id, amount):
+        ...
 
 
 # ---------------------------------------------------------------------------
