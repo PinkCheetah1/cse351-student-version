@@ -2,7 +2,7 @@
 Course: CSE 351 
 Lesson: L03 team activity
 File:   team.py
-Author: <Add name here>
+Author: Hannah Crenshaw
 
 Purpose: Retrieve Star Wars details from a server
 
@@ -37,22 +37,23 @@ from common import *
 
 # Include cse 351 common Python files
 from cse351 import *
-
+import queue
 # global
 call_count = 0
 
-def get_urls(film6, kind):
-    global call_count
 
-    urls = film6[kind]
-    print(kind)
-    for url in urls:
-        call_count += 1
+def consume_urls(q):
+    while True:
+        url = q.get()
+        if url is None:
+            break
         item = get_data_from_server(url)
         print(f'  - {item["name"]}')
 
 def main():
     global call_count
+    tasks = queue.Queue()
+    # Create queue here? 
 
     log = Log(show_terminal=True)
     log.start_timer('Starting to retrieve data from the server')
@@ -60,13 +61,32 @@ def main():
     film6 = get_data_from_server(f'{TOP_API_URL}/films/6')
     call_count += 1
     print_dict(film6)
-
     # Retrieve people
-    get_urls(film6, 'characters')
-    get_urls(film6, 'planets')
-    get_urls(film6, 'starships')
-    get_urls(film6, 'vehicles')
-    get_urls(film6, 'species')
+    great_urls = []
+    great_urls.append(film6['characters'])
+    great_urls.append(film6['planets'])
+    great_urls.append(film6['starships'])
+    great_urls.append(film6['vehicles'])
+    great_urls.append(film6['species'])
+
+    for urls in great_urls:
+        for url in urls:
+            tasks.put(url)
+
+    for i in range(50):
+        tasks.put(None)
+    
+    thread_list = []
+    for i in range(50):
+        thread_list.append(threading.Thread(target=consume_urls, args=(tasks,)))
+
+    for thread in thread_list:
+        thread.start()
+
+    for thread in thread_list:
+        thread.join()
+
+
 
     log.stop_timer('Total Time To complete')
     log.write(f'There were {call_count} calls to the server')
