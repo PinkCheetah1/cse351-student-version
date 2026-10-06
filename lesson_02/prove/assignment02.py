@@ -3,6 +3,15 @@ Course    : CSE 351
 Assignment: 02
 Student   : Hannah Crenshaw
 
+Category: 4 (Meets Requirements)
+Why: The program runs with 10 threads and is designed to be thread safe. The results
+match the expected results and run quickly. 
+Additional comment: I put the lock around calls to the bank from each ATM instead of
+in each account because I found the results to be consistently 2-5 seconds faster
+each time. This confuses me. Is having the lock around the bank the "correct" answer?
+Why would it be SLOWER to have a separate lock for each account? 
+Thanks!
+
 Instructions:
     - review instructions in the course
 """
@@ -33,15 +42,19 @@ def main():
 
     # NOTES
     # Need Lock? 
+    lock = threading.Lock()
 
     # TODO - Add an ATM_Reader for each data file
+    atm_list = []
     for file_path in data_files:
-        atm_list = []
-        new_atm = ATM_Reader(file_path, bank)
+        new_atm = ATM_Reader(file_path, bank, lock)
         atm_list.append(new_atm)
 
     for atm in atm_list:
         atm.start()
+
+    for atm in atm_list:
+        atm.join()
 
     test_balances(bank) # Automated Tests
 
@@ -56,9 +69,10 @@ class ATM_Reader(threading.Thread):
     # Add variables to process file data
     # call bank Withdraw, Deposit 
     # Run method
-    def __init__(self, file_path, bank):
+    def __init__(self, file_path, bank, lock):
         threading.Thread.__init__(self)
         self.file_path = file_path
+        self.lock = lock
         self.bank = bank
         self.acc_id = ''
         self.amount = ''
@@ -71,31 +85,50 @@ class ATM_Reader(threading.Thread):
             # One line at a time, pars data
             for line in file: 
                 clean_line = line.strip()
+
+                if line.startswith('#'):
+                    continue
                 line_data = clean_line.split(',')
-                self.acc_id = line_data[0]
+                self.acc_id = int(line_data[0])
                 self.trans_type = line_data[1]
                 self.amount = line_data[2]
 
                 # Call bank with our data
                 if self.trans_type == 'w':
-                    self.bank.withdraw(acc_id=self.acc_id, amount=self.amount)
+                    with self.lock:
+                        self.bank.withdraw(id=self.acc_id, amount=self.amount)
                 elif self.trans_type == 'd':
-                    self.bank.withraw(self.acc_id, self.amount)
-
-                return
+                    with self.lock:
+                        self.bank.deposit(id=self.acc_id, amount=self.amount)
 
 
 # ===========================================================================
 class Account():
+    def __init__(self):
+        self.balance = Money('0')
+
     # TODO - implement this class here
     # Method Deposit(amount)
     # Method Withdraw(amount)
     # Method GetBal() : Money
-    ...
+    def deposit(self, amount):
+        add_amount = Money(amount)
+        self.balance.add(add_amount)
+
+    def withdraw(self, amount):
+        sub_amount = Money(amount)
+        self.balance.sub(sub_amount)
+
+    def get_bal(self):
+        return self.balance
 
 
 # ===========================================================================
 class Bank():
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.accounts = {}
+        self.account_balance = None
 
     # TODO - implement this class here
     # Receive account info? 
@@ -103,13 +136,21 @@ class Bank():
     # Deposit Method (acc.id, amount)
     # Withdraw Method (acc.id, amount)
     # Get balance method (acc)
-    def __init__(self):
-        ...
-    def withdraw(acc_id, amount):
-        ...
-    def deposit(acc_id, amount):
-        ...
 
+    def withdraw(self, id, amount):
+        if id not in self.accounts:
+            self.accounts[id] = Account()
+        self.accounts[id].withdraw(amount)
+
+        
+    def deposit(self, id, amount):
+        if id not in self.accounts:
+            self.accounts[id] = Account()
+        self.accounts[id].deposit(amount)
+        
+    def get_balance(self, id):
+        return self.accounts[id].get_bal()
+         
 
 # ---------------------------------------------------------------------------
 
