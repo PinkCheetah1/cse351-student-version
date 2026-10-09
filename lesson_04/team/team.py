@@ -56,19 +56,37 @@ class Queue351():
         return len(self.__items) + extra
 
 # ---------------------------------------------------------------------------
-def producer():
+def producer(q, bar, filled, empty):
     for i in range(PRIME_COUNT):
         number = random.randint(1, 1_000_000_000_000)
-        # TODO - place on queue for workers
 
+        empty.acquire()
+        q.put(number)
+        filled.release()
+
+    id = bar.wait()
+    if id == 1:
     # TODO - select one producer to send the "All Done" message
-
+        for i in range(CONSUMERS):
+            empty.acquire()
+            q.put(None)
+            filled.release()
 # ---------------------------------------------------------------------------
-def consumer():
+def consumer(q, file_lock, filled, empty):
     # TODO - get values from the queue and check if they are prime
     # TODO - if prime, write to the file
     # TODO - if "All Done" message, exit the loop
-    ...
+    while True:
+        filled.acquire()
+        num = q.get()
+        empty.release()
+        if num is None:
+            print("Consumer all done")
+            return
+        if is_prime(num):
+            with file_lock:
+                with open(FILENAME, 'a') as file:
+                    file.write(f"{num}\n")
 
 # ---------------------------------------------------------------------------
 def main():
@@ -78,12 +96,22 @@ def main():
     que = Queue351()
 
     # TODO - create semaphores for the queue (see Queue351 class)
+    filled = threading.Semaphore(0)
+    empty = threading.Semaphore(10)
+
+    file_lock = threading.Lock()
 
     # TODO - create barrier
+    bar = threading.Barrier(PRODUCERS)
 
     # TODO - create producers threads (see PRODUCERS value)
+    pros = [ threading.Thread(target=producer, args=(que, bar, filled, empty)) for _ in range(PRODUCERS)]
 
     # TODO - create consumers threads (see CONSUMERS value)
+    cons = [ threading.Thread(target=consumer, args=(que, file_lock, filled, empty)) for _ in range(CONSUMERS)]
+
+    [ t.start() for t in pros + cons]
+    [ t.join() for t in pros + cons]
 
     if os.path.exists(FILENAME):
         with open(FILENAME, 'r') as f:
