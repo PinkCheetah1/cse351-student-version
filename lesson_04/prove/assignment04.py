@@ -1,7 +1,7 @@
 """
 Course    : CSE 351
 Assignment: 04
-Student   : <your name here>
+Student   : Hannah Crenshaw
 
 Instructions:
     - review instructions in the course
@@ -22,19 +22,66 @@ from common import *
 
 from cse351 import *
 
-THREADS = 0                 # TODO - set for your program
-WORKERS = 0                 # TODO - set for your program
+THREADS = 200               # TODO - set for your program
+WORKERS = 10                 # TODO - set for your program
 RECORDS_TO_RETRIEVE = 5000  # Don't change
 
 
 # ---------------------------------------------------------------------------
-def retrieve_weather_data():
+def retrieve_weather_data(fetch_q, write_q, fetch_empty, fetch_full, write_empty, write_full):
     # TODO - fill out this thread function (and arguments)
+    while True:
+        fetch_full.acquire() # -1 to full spots
+        queue_request = fetch_q.get()
+        fetch_empty.release() # +1 to empty spots
+
+        if queue_request is None:
+            return
+
+        city, rec_num = queue_request
+        # Fetch from server yay
+        city_data = get_data_from_server(f"{TOP_API_URL}/record/{city}/{rec_num}")
+        
+        name = city_data['city']
+        date = city_data['date']
+        temp = city_data['temp']
+        # Put in new queue!
+        write_empty.acquire()
+        write_q.put((name, date, temp))
+        write_full.release()
+    return
     ...
 
 
 # ---------------------------------------------------------------------------
 # TODO - Create Worker threaded class
+class Worker(threading.Thread):
+    def __init__(self, write_q, write_empty, write_full, noaa):
+        threading.Thread.__init__(self)
+        self.write_q = write_q
+        self.write_empty = write_empty
+        self.write_full = write_full
+        self.noaa = noaa
+
+    def run(self):
+        while True:
+            # Pull from queue
+            self.write_full.acquire()
+            city_data = self.write_q.get()
+            self.write_empty.release()
+
+            # If is none, return
+            if city_data is None:
+                return
+
+            # Parse data and write to NOAA
+            name = city_data[0]
+            date = city_data[1]
+            temp = city_data[2]
+
+            self.noaa.write(name, date, temp)
+
+        return
 
 
 # ---------------------------------------------------------------------------
@@ -42,10 +89,23 @@ def retrieve_weather_data():
 class NOAA:
 
     def __init__(self):
-        ...
+
+        # dictionary stores city : [(date, temp), ...]
+        self.city_records = {}
+        for city in CITIES:
+            self.city_records[city] = []
+        self.lock = threading.Lock()
+        
+
+    def write(self, name, date, temp):
+        with self.lock:
+            self.city_records[name].append((date, temp))
 
     def get_temp_details(self, city):
-        return 0.0
+        temps = []
+        for date, temp in self.city_records[city]:
+            temps.append(temp)
+        return sum(temps) / len(temps)
 
 
 # ---------------------------------------------------------------------------
@@ -126,7 +186,63 @@ def main():
     records = RECORDS_TO_RETRIEVE
 
     # TODO - Create any queues, semaphores, locks or barriers you need
+    fetch_q = Queue351()
+    write_q = Queue351()
 
+
+    # Fetching Semaphors
+    fetch_empty = threading.Semaphore(10)
+    fetch_full = threading.Semaphore(0)
+
+    # Writing Semaphors
+    write_empty = threading.Semaphore(10)
+    write_full = threading.Semaphore(0)
+
+    # Create threads first so they start pulling from queue immediately
+    fetch_threads = []
+    for i in range(THREADS):
+        new_thread = threading.Thread(target=retrieve_weather_data, args=(fetch_q, write_q, fetch_empty, fetch_full, write_empty, write_full))
+        fetch_threads.append(new_thread)
+        new_thread.start()
+
+    # Create workers
+    workers = []
+    for i in range(WORKERS):
+        new_worker = Worker(write_q, write_empty, write_full, noaa)
+        workers.append(new_worker)
+        new_worker.start()        
+
+    # Start loading the queue
+    for city in CITIES:
+        print(f"queueing {city}")
+        for i in range(RECORDS_TO_RETRIEVE):
+            fetch_empty.acquire() # -1 to empty spots
+            fetch_q.put((city, i))
+            fetch_full.release() # +1 to full spots
+
+
+
+    # After loading queue, put fetch sentinels 
+    for i in range(THREADS):
+        fetch_empty.acquire() # -1 to empty spots
+        fetch_q.put(None)
+        fetch_full.release()
+
+    # join threads
+    for thread in fetch_threads:
+        thread.join()
+
+    # after threads join, put worker sentinels
+    for i in range(WORKERS):
+        write_empty.acquire()
+        write_q.put(None)
+        write_full.release()
+
+    # join workers
+    for worker in workers:
+        worker.join()
+
+    
 
 
 

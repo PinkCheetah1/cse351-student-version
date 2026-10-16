@@ -32,6 +32,11 @@ def is_prime(n):
         i += 6
     return True
 
+def worker(n):
+    if is_prime(n):
+        return
+    return
+
 def main():
     log = Log(show_terminal=True)
     log.start_timer()
@@ -45,15 +50,24 @@ def main():
     range_count = 100000
     numbers_processed = 0
     prime_count = 0
-    for i in range(start, start + range_count):
-        numbers_processed += 1
-        if is_prime(i):
-            prime_count += 1
-            print(i, end=', ', flush=True)
-    print(flush=True)
 
-    end_time = time.time()
-    elapsed_time = end_time - start_time
+    numbers = list(range(start, start+range_count))
+
+    # results = [pool.apply_async(is_prime, args=(x,)) for x in range(start, start + range_count) ]
+
+    for cpu in range(1, mp.cpu_count() + 1):
+        print(f'processing cpu = {cpu}')
+        with mp.Pool(cpu) as p:
+            results = p.map(worker, numbers)
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+
+        xaxis_cpus.append(cpu)
+        yaxis_times.append(elapsed_time)
+        print(f'{cpu} cpus took {elapsed_time} to print')
+
+    
 
     # create plot of results and also save it to a PNG file
     plt.plot(xaxis_cpus, yaxis_times)
