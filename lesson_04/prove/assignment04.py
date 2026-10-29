@@ -22,7 +22,7 @@ from common import *
 
 from cse351 import *
 
-THREADS = 200               # TODO - set for your program
+THREADS = 250               # TODO - set for your program
 WORKERS = 10                 # TODO - set for your program
 RECORDS_TO_RETRIEVE = 5000  # Don't change
 
