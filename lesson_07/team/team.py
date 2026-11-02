@@ -66,10 +66,51 @@ import threading
 PHILOSOPHERS = 5
 MAX_MEALS_EATEN = PHILOSOPHERS * 5 # NOTE: Total meals to be eaten, not per philosopher!
 
+# Eating Function
+# Check if both locks are available. If not, try again in one second. 
+# When both locks are available, eat for a few seconds
+# When done eating, think for a few seconds
+# When done thinking, return back to the start and try to eat again. 
+
+class Philosopher(threading.Thread):
+    def __init__(self, lock1, lock2, num):
+        threading.Thread.__init__()
+        self.lock1 = lock1
+        self.lock2 = lock2
+        self.num = num
+        self.times_eaten = 0
+        self.locks_are_aquired = False
+
+        ...
+
+    # run function
+    def run(self):
+      # Loop one: while true
+      while True:
+          # Loop two: until locks aquired
+          while self.locks_are_aquired != True:
+              # Try to acquire locks. Break loop once locks are acquired. 
+              # If lock not aquired, sleep before trying again
+              if self.lock1.acquire() == True and self.lock2.acquire() == True:
+                  self.locks_are_aquired = True
+              else:
+                  time.sleep(0.9)
+          # Once while loop is broken, locks are acquired. Eat. 
+          print(f"Philosopher{self.num} is eating.")
+
+
+    # get times eaten function
+
 def main():
     # TODO - Create the forks.
+    # Create one fork per philosopher (locks)
+
     # TODO - Create PHILOSOPHERS philosophers.
+
+
     # TODO - Start them eating and thinking.
+
+
     # TODO - Display how many times each philosopher ate.
     pass
 
