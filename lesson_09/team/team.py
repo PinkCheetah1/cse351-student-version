@@ -65,6 +65,9 @@ def main():
     start_time = time.time()
 
     # TODO - add any variables, data structures, processes you need
+    guests_current = mp.Value()
+    cleaned_count = mp.Value()
+    party_count = mp.Value()
     # TODO - add any arguments to cleaner() and guest() that you need
 
     # Results

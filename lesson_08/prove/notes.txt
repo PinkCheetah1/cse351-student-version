@@ -1,0 +1,6 @@
+Hint for how to return path: dictionaries? We need to hold something. Not a lot of data structures. 
+
+Challenges: 
+- Loops. When you return from exploring down a looped path, a space that was available may no longer be available. 
+- A conditional loop to check if a space is safe to move to is NOT thread safe. 
+
