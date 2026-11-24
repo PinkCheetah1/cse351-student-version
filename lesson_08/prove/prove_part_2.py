@@ -2,7 +2,7 @@
 Course: CSE 351 
 Assignment: 08 Prove Part 2
 File:   prove_part_2.py
-Author: <Add name here>
+Author: Hannah Crenshaw
 
 Purpose: Part 2 of assignment 8, finding the path to the end of a maze using recursion.
 
@@ -21,11 +21,19 @@ position:
 
 What would be your strategy?
 
-<Answer here>
+I think we'd have to use classes. Because I wouldn't want to make a new class for each 
+recursive function call, I would make a new threaded class for each thread. Right now, the threads
+do not return any value because threads aren't designed to return or preserve a value after being
+called. I would create a new class for each thread to preserve the movement data. After the
+end has been found, the class that found the end would return to its starting point in recursion
+where it branched off and alert that class of which path was the right one. In other words, it
+would work similar to part 1 by using classes to preserve and return the data. 
 
 Why would it work?
 
-<Answer here>
+Classes can preserve data even after the thread has been closed. This allows us to retreive 
+the solution information and piece together the maze solution at the end, adding each move to
+a list as they retrace their steps. 
 
 """
 
@@ -87,6 +95,63 @@ def solve_find_end(maze):
     global stop
     stop = False
 
+    global thread_count
+    thread_count = 0
+
+    # Lock for thread count
+    count_lock = threading.Lock()
+
+    def move_from_space(maze, x, y, color, count_lock):
+        global stop
+        global thread_count
+        # List of threads, for joining
+        threads = []
+        # Lock for maze, when drawing
+        maze_lock = threading.Lock()
+        
+        # End thread if the maze has been solved
+        if stop:
+            return
+        
+        # Color space with thread color if not already colored.
+        if maze.can_move_here(x, y):
+            maze.move(x, y, color)
+        else:
+            return
+
+        if maze.at_end(x, y):
+            stop = True
+            return
+
+        possible_moves = maze.get_possible_moves(x, y)
+
+        # Make sure there are moves available
+        if len(possible_moves) != 0:
+            # Save first move, remove from list. 
+            first_x, first_y = possible_moves.pop(0)
+
+            # Only create more threads if there are more moves available
+            if len(possible_moves) != 0:
+                for next_x, next_y in possible_moves:
+                    with count_lock:
+                        thread_count += 1
+                    new_thread = threading.Thread(target=move_from_space, args=(maze, next_x, next_y, get_color(), count_lock))
+                    new_thread.start()
+                    threads.append(new_thread)
+
+            # After starting new threads, if any, continue recursively with same color
+            move_from_space(maze, first_x, first_y, color, count_lock)
+
+        # Once all is said and done, join threads and return.
+        for thread in threads:
+            thread.join()
+        return 
+    
+    # Get starting x, y
+    x, y = maze.get_start_pos()
+    # Start moving from that point. 
+    move_from_space(maze, x, y, COLOR, count_lock)
+    return # Return to main when done
 
 
 

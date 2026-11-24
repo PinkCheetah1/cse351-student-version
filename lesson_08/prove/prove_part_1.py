@@ -2,7 +2,7 @@
 Course: CSE 251 
 Assignment: 08 Prove Part 1
 File:   prove_part_1.py
-Author: <Add name here>
+Author: Hannah Crenshaw
 
 Purpose: Part 1 of assignment 8, finding the path to the end of a maze using recursion.
 
@@ -34,9 +34,46 @@ def solve_path(maze):
     """ Solve the maze and return the path found between the start and end positions.  
         The path is a list of positions, (x, y) """
     path = []
-    # TODO: Solve the maze recursively while tracking the correct path.
+    
+    # TODO: Solve the maze recursively while tracking the correct path
 
     # Hint: You can create an inner function to do the recursion
+
+    def move_from_space(maze, x, y):
+        # 1. Get possible moves
+        solution_path = []
+        maze.move(x, y, COLOR)
+
+        if maze.at_end(x, y):
+            solution_path.append((x, y))
+            return solution_path
+
+        possible_moves = maze.get_possible_moves(x, y)
+        # If there are no possible moves, return the empty path
+        if len(possible_moves) == 0:
+            maze.restore(x, y)
+            return solution_path
+        else: 
+            for next_x, next_y in possible_moves:
+                # Double check that we can still move here
+                if maze.can_move_here(next_x, next_y):
+                    # Move to space and check if it returns the solution or not
+                    returned_path = move_from_space(maze, next_x, next_y)
+
+                    if len(returned_path) != 0:
+                        # This is the solution path. 
+                        # Concat current x, y pair, and return new list
+                        solution_path = returned_path
+                        solution_path.append((x, y))
+                        return solution_path
+        # If we reach the end of the loop and found nothing, return empty path
+        maze.restore(x, y)
+        return solution_path
+
+    # Get starting x, y
+    x, y = maze.get_start_pos()
+        # Start moving from that point. The final returned path will be the solution
+    path = move_from_space(maze, x, y)
 
     return path
 

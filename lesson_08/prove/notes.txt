@@ -4,3 +4,20 @@ Challenges:
 - Loops. When you return from exploring down a looped path, a space that was available may no longer be available. 
 - A conditional loop to check if a space is safe to move to is NOT thread safe. 
 
+
+Process
+- Check a square 
+- If at end, return list with cords tuple
+- For each move you can make:
+    - Make sure you can still move there
+    - If yes, move to that square
+        - If that move returns a list, concat cords and return list
+        - If None, move to the next possible move
+    - If no, continue
+- If no more moves, return None
+
+
+PT 2: 
+- Get a list of possible moves
+- For the first move, if exists, continue down recursively with that same thread and color
+- For all other moves, if they exist, spin up a new thread and continue with a new color

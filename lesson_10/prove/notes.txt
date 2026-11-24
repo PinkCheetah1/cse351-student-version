@@ -1,2 +1,7 @@
 
 BFS is NOT recursive. DFS IS recursive. 
+
+very confused
+
+In one of them, you create threads to branch down. DFS? 
+In the other, you are just using recursion? 
